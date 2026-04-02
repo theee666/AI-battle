@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 大逃杀 - 20 个 AI 的生存竞赛</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            grid-template-rows: 60px 1fr 200px;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            background: linear-gradient(45deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .game-info {
+            display: flex;
+            gap: 30px;
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .info-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .arena-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #arena {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .ai-agent {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .ai-agent:hover {
+            transform: scale(1.2);
+            z-index: 100;
+        }
+
+        .ai-agent.eliminated {
+            opacity: 0.3;
+            filter: grayscale(100%);
+            pointer-events: none;
+        }
+
+        .ai-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ai-panel h3 {
+            margin-bottom: 15px;
+            color: #00d9ff;
+            font-size: 18px;
+        }
+
+        .ai-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ai-entry {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ai-entry:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .ai-entry.eliminated {
+            opacity: 0.4;
+            text-decoration: line-through;
+        }
+
+        .ai-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            border: 2px solid;
+        }
+
+        .ai-details {
+            flex: 1;
+        }
+
+        .ai-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .ai-status {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
+        .ai-health {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .ai-health-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #00ff88);
+            transition: width 0.3s ease;
+        }
+
+        .control-panel {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        .btn-start {
+            background: linear-gradient(45deg, #00d9ff, #00ff88);
+            color: #000;
+        }
+
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 217, 255, 0.4);
+        }
+
+        .btn-pause {
+            background: rgba(255, 193, 7, 0.8);
+            color: #000;
+        }
+
+        .btn-reset {
+            background: rgba(244, 67, 54, 0.8);
+            color: #fff;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        .speed-control label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .speed-slider {
+            width: 150px;
+            cursor: pointer;
+        }
+
+        .god-power {
+            display: flex;
+            gap: 10px;
+        }
+
+        .god-btn {
+            padding: 10px 16px;
+            border: 2px solid;
+            border-radius: 8px;
+            background: transparent;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .god-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .god-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .god-btn.heal {
+            border-color: #00ff88;
+            color: #00ff88;
+        }
+
+        .god-btn.damage {
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+
+        .god-btn.speed {
+            border-color: #00d9ff;
+            color: #00d9ff;
+        }
+
+        .god-btn.slow {
+            border-color: #9c27b0;
+            color: #9c27b0;
+        }
+
+        .event-log {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 370px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+            z-index: 100;
+        }
+
+        .event-item {
+            padding: 5px;
+            margin-bottom: 5px;
+            border-left: 3px solid;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .event-item.combat {
+            border-color: #ff4444;
+        }
+
+        .event-item.heal {
+            border-color: #00ff88;
+        }
+
+        .event-item.elimination {
+            border-color: #ff9800;
+        }
+
+        .event-item.god {
+            border-color: #00d9ff;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            max-width: 500px;
+        }
+
+        .modal h2 {
+            font-size: 32px;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .winner-avatar {
+            font-size: 80px;
+            margin: 20px 0;
+        }
+
+        .modal button {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 16px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 13px;
+            z-index: 1000;
+            pointer-events: none;
+            max-width: 250px;
+        }
+
+        .tooltip-name {
+            font-weight: bold;
+            color: #00d9ff;
+            margin-bottom: 8px;
+        }
+
+        .tooltip-stat {
+            margin: 4px 0;
+        }
+
+        .stat-label {
+            opacity: 0.7;
+        }
+
+        .stat-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>🤖 AI 大逃杀</h1>
+            <div class="game-info">
+                <div class="info-item">
+                    <div class="info-label">存活 AI</div>
+                    <div class="info-value" id="alive-count">20</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">回合数</div>
+                    <div class="info-value" id="round-count">0</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">游戏时间</div>
+                    <div class="info-value" id="game-time">00:00</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arena-container">
+            <canvas id="arena"></canvas>
+            <div class="event-log" id="event-log"></div>
+        </div>
+
+        <div class="ai-panel">
+            <h3>📊 AI 状态</h3>
+            <div class="ai-list" id="ai-list"></div>
+        </div>
+
+        <div class="control-panel">
+            <button class="control-btn btn-start" id="btn-start">开始游戏</button>
+            <button class="control-btn btn-pause" id="btn-pause">暂停</button>
+            <button class="control-btn btn-reset" id="btn-reset">重置</button>
+            
+            <div class="god-power">
+                <button class="god-btn heal" data-power="heal">💚 治疗</button>
+                <button class="god-btn damage" data-power="damage">💔 伤害</button>
+                <button class="god-btn speed" data-power="speed">⚡ 加速</button>
+                <button class="god-btn slow" data-power="slow">🐌 减速</button>
+            </div>
+
+            <div class="speed-control">
+                <label>速度:</label>
+                <input type="range" class="speed-slider" id="speed-slider" min="1" max="10" value="5">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="winner-modal">
+        <div class="modal-content">
+            <h2>🏆 冠军诞生!</h2>
+            <div class="winner-avatar" id="winner-avatar"></div>
+            <h3 id="winner-name"></h3>
+            <p id="winner-desc"></p>
+            <button class="control-btn btn-start" onclick="game.reset()">再来一局</button>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip" style="display: none;"></div>
+
+    <script src="game.js"></script>
+</body>
+</html>
